@@ -10,7 +10,7 @@ import {
 import {
   getSubjects, createSubject,
   uploadNote, deleteNote,
-  sendMessage, getChatHistory, getAllChatHistories,
+  sendMessage, getChatHistory, getAllChatHistories, clearChatHistory,
 } from '../api/askMyNotes';
 
 // ─── Confidence Badge ───
@@ -340,14 +340,27 @@ const StitchInterface = () => {
       const subList = await getSubjects();
       setSubjects(subList);
       if (subList.length > 0) {
-        setSubjectId(subList[0]._id);
-        const history = await getChatHistory(subList[0]._id);
-        setMessages(history);
-        setUploadedFiles(subList[0].notes || []);
+        // Try to restore the last active subject from localStorage
+        const savedId = localStorage.getItem('activeSubjectId');
+        const activeSubject = savedId ? subList.find(s => s._id === savedId) : null;
+        const targetSubject = activeSubject || subList[subList.length - 1];
+        setSubjectId(targetSubject._id);
+        localStorage.setItem('activeSubjectId', targetSubject._id);
+        // Load chat history for the target subject
+        try {
+          const history = await getChatHistory(targetSubject._id);
+          setMessages(history || []);
+        } catch {
+          setMessages([]);
+        }
+        setUploadedFiles(targetSubject.notes || []);
       } else {
         const subject = await createSubject('My Notes');
         setSubjects([subject]);
         setSubjectId(subject._id);
+        localStorage.setItem('activeSubjectId', subject._id);
+        setMessages([]);
+        setUploadedFiles([]);
       }
       // Fetch all chat histories for sidebar
       const histories = await getAllChatHistories();
@@ -360,6 +373,7 @@ const StitchInterface = () => {
   async function loadConversation(historySubjectId) {
     try {
       setSubjectId(historySubjectId);
+      localStorage.setItem('activeSubjectId', historySubjectId);
       const history = await getChatHistory(historySubjectId);
       setMessages(history);
       // Also load the subject's files
@@ -457,6 +471,26 @@ const StitchInterface = () => {
     "Explain the technical terms mentioned in the file",
     "List the main action items or takeaways"
   ];
+
+  async function handleNewChat() {
+    try {
+      // 1. Refresh sidebar so current conversation appears in history
+      await refreshHistories();
+      // 2. Create a new subject for the fresh chat
+      const newSubject = await createSubject(`Chat ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`);
+      setSubjects((prev) => [...prev, newSubject]);
+      setSubjectId(newSubject._id);
+      localStorage.setItem('activeSubjectId', newSubject._id);
+      // 3. Clear the UI for a fresh chat
+      setMessages([]);
+      setUploadedFiles([]);
+      setInput('');
+      setError('');
+    } catch (err) {
+      console.error('New chat error:', err);
+      setError('Could not create new chat. Try again.');
+    }
+  }
 
   return (
     <>
@@ -699,92 +733,28 @@ const StitchInterface = () => {
             </div>
           </nav>
 
-          {/* Main Area */}
-          <main style={{ maxWidth: 900, margin: '0 auto', width: '100%', padding: '32px 40px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: 36 }}>
-              <h2 style={{
-                fontSize: '2.2rem', fontWeight: 900, color: '#f1f5f9', margin: 0,
-                letterSpacing: '-1px', lineHeight: 1.2,
-                animation: 'heroFadeIn 0.8s ease-out both',
-              }}>
-                Chat with Your{' '}
-                <span style={{
-                  background: 'linear-gradient(90deg, #c084fc, #818cf8, #67e8f9)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}>Notes</span>
-              </h2>
-              <p style={{ color: '#64748b', fontSize: 14, marginTop: 10, animation: 'heroFadeIn 0.8s 0.25s ease-out both' }}>
-                Upload PDFs or TXT files and ask questions to the AI.
-              </p>
-            </div>
-
-            {/* ─── File Drop Area ─── */}
-            <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".pdf,.txt" style={{ display: 'none' }} />
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className="card-glass"
-              style={{
-                width: '100%', marginBottom: 32,
-                border: `2px dashed ${isDragging ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.08)'}`,
-                borderRadius: 24, padding: '40px', display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                background: isDragging ? 'rgba(124,58,237,0.06)' : 'rgba(255,255,255,0.02)',
-              }}
-            >
-              <div style={{
-                padding: 12, borderRadius: '50%', marginBottom: 12,
-                background: isDragging ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.06)',
-              }}>
-                {uploading ? <Loader2 size={32} className="animate-spin text-purple-400" /> : <UploadCloud size={32} style={{ color: isDragging ? '#a78bfa' : '#4b5563' }} />}
-              </div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: '#94a3b8', margin: 0 }}>
-                {uploading ? 'Processing file...' : <>Drop files here or <span style={{ color: '#a78bfa', fontWeight: 700 }}>browse</span></>}
-              </p>
-              <p style={{ fontSize: 11, color: '#334155', marginTop: 8 }}>PDF or TXT files supported</p>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div style={{
-                width: '100%', marginBottom: 20, padding: '12px 16px', borderRadius: 12,
-                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                color: '#f87171', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10
-              }}>
-                <p style={{ margin: 0, flex: 1 }}>{error}</p>
-                <X size={16} onClick={() => setError('')} style={{ cursor: 'pointer', opacity: 0.7 }} />
-              </div>
-            )}
-
-            {/* ─── Chat Messages Area ─── */}
-            {messages.length > 0 && (
-              <div style={{ width: '100%', marginBottom: 32, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {messages.map((msg, i) => {
-                  const isUser = msg.role === 'user';
-                  return (
-                    <div key={i} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
-                      <div className="card-glass" style={{
-                        maxWidth: '85%', borderRadius: 20, padding: '16px 20px',
-                        background: isUser ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.04)',
-                        borderColor: isUser ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.08)',
-                        borderRadius: isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                      }}>
-                        <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>
-                          {(() => {
-                            const content = msg.content || '';
-                            if (typeof content === 'string' && content.trim().startsWith('{')) {
-                              try {
-                                const parsed = JSON.parse(content);
-                                return parsed.answer || content;
-                              } catch {
-                                return content;
-                              }
+          {/* ─── Chat Messages Area ─── */}
+          {messages.length > 0 && (
+            <div style={{ width: '100%', marginBottom: 32, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {messages.map((msg, i) => {
+                const isUser = msg.role === 'user';
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
+                    <div className="card-glass" style={{
+                      maxWidth: '85%', padding: '16px 20px',
+                      background: isUser ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.04)',
+                      borderColor: isUser ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.08)',
+                      borderRadius: isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                    }}>
+                      <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>
+                        {(() => {
+                          const content = msg.content || '';
+                          if (typeof content === 'string' && content.trim().startsWith('{')) {
+                            try {
+                              const parsed = JSON.parse(content);
+                              return parsed.answer || content;
+                            } catch {
+                              return content;
                             }
                             return content;
                           })()}
@@ -846,113 +816,33 @@ const StitchInterface = () => {
               </div>
             )}
 
-            {/* ─── Input Box Area ─── */}
-            <div className="input-glow" style={{ width: '100%' }}>
-              <div className="card-glass" style={{
-                borderRadius: 24, padding: '24px', minHeight: 180,
-                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
-              }}>
-
-                {/* Attached file cards inside input area */}
-                {uploadedFiles.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-                    {uploadedFiles.map((f) => (
-                      <div key={f._id} style={{
-                        position: 'relative', display: 'flex', alignItems: 'center', gap: 12,
-                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                        padding: 10, borderRadius: 16, minWidth: 240, maxWidth: 300,
-                      }}>
-                        <div style={{ width: 40, height: 40, background: '#3b82f6', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <FileText size={20} color="#fff" />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.originalName}</p>
-                          <p style={{ fontSize: 10, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>Document</p>
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteNote(f._id); }}
-                          style={{
-                            position: 'absolute', top: -8, right: -8, width: 20, height: 20,
-                            borderRadius: '50%', background: '#fff', border: 'none', color: '#000',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
-                          }}
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <textarea
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                  disabled={sending}
-                  placeholder={uploadedFiles.length === 0 ? "Upload notes first to start chatting..." : "Ask anything about your notes..."}
-                  style={{
-                    background: 'transparent', border: 'none', outline: 'none',
-                    fontSize: 16, color: '#f1f5f9', resize: 'none', width: '100%', height: 80,
-                    fontFamily: "'Inter', sans-serif", lineHeight: 1.6,
-                  }}
-                />
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      style={{
-                        padding: 10, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)',
-                        background: 'rgba(255,255,255,0.03)', color: '#94a3b8', cursor: 'pointer',
-                        display: 'flex', transition: 'all 0.2s'
-                      }}
-                    >
-                      <Plus size={18} />
-                    </button>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.03)', padding: '6px 14px', borderRadius: 99, border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'linear-gradient(45deg, #a855f7, #10b981)' }} />
-                      <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>Gemini Flash</span>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {/* Voice Chat Mode button */}
-                    <button
-                      onClick={startVoiceMode}
-                      disabled={uploadedFiles.length === 0}
-                      style={{
-                        padding: '10px 16px', borderRadius: 14,
-                        border: '1px solid rgba(124,58,237,0.3)',
-                        background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(59,130,246,0.1))',
-                        color: '#a78bfa',
-                        cursor: uploadedFiles.length === 0 ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s',
-                        opacity: uploadedFiles.length === 0 ? 0.4 : 1,
-                        fontWeight: 600, fontSize: 13,
-                      }}
-                      title="Start voice conversation"
-                    >
-                      <Mic size={16} /> Voice Chat
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button
-                      onClick={handleSend}
-                      disabled={!input.trim() || sending || uploadedFiles.length === 0}
-                      className="btn-purple"
-                      style={{
-                        padding: '12px 24px', borderRadius: 14, border: 'none', color: '#fff',
-                        fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.3s',
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        opacity: (!input.trim() || sending || uploadedFiles.length === 0) ? 0.4 : 1,
-                      }}
-                    >
-                      {sending ? <Loader2 size={18} className="animate-spin" /> : <><ArrowRight size={18} /> Ask AI</>}
-                    </button>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    onClick={handleNewChat}
+                    style={{
+                      padding: '12px 20px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'rgba(255,255,255,0.04)', color: '#94a3b8',
+                      fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                    }}
+                    onMouseOver={e => { e.currentTarget.style.borderColor = 'rgba(124,58,237,0.4)'; e.currentTarget.style.color = '#e2e8f0'; }}
+                    onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#94a3b8'; }}
+                  >
+                    <RefreshCw size={14} /> New Chat
+                  </button>
+                  <button
+                    onClick={handleSend}
+                    disabled={!input.trim() || sending || uploadedFiles.length === 0}
+                    className="btn-purple"
+                    style={{
+                      padding: '12px 24px', borderRadius: 14, border: 'none', color: '#fff',
+                      fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.3s',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      opacity: (!input.trim() || sending || uploadedFiles.length === 0) ? 0.4 : 1,
+                    }}
+                  >
+                    {sending ? <Loader2 size={18} className="animate-spin" /> : <><ArrowRight size={18} /> Ask AI</>}
+                  </button>
                 </div>
               </div>
             </div>

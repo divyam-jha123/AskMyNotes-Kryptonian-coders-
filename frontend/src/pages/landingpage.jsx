@@ -288,91 +288,139 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Mock Chat UI Card */}
-          <div className="glow-purple" style={{
-            background: 'rgba(15,15,25,0.85)',
-            border: '1px solid rgba(124,58,237,0.3)',
-            borderRadius: 28, overflow: 'hidden',
-            backdropFilter: 'blur(20px)',
+          {/* ── Nova Star Animation ── */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px 0 40px',
           }}>
-            {/* Window bar */}
-            <div style={{
-              padding: '14px 20px', display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {['#ef4444','#f59e0b','#10b981'].map((c,i) => (
-                  <div key={i} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />
-                ))}
-              </div>
-              <span style={{ fontSize: 11, color: '#4b5563', fontWeight: 500 }}>CS101: Data Structures — Week 4</span>
-            </div>
+            <svg viewBox="0 0 400 400" width="420" height="420" style={{ overflow: 'visible' }}>
+              <defs>
+                <linearGradient id="novaGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#7C3AED" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.8" />
+                </linearGradient>
+                <linearGradient id="novaGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#c084fc" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="#818cf8" stopOpacity="0.6" />
+                </linearGradient>
+                <filter id="novaGlow">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+                <filter id="novaGlowBig">
+                  <feGaussianBlur stdDeviation="8" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
 
-            {/* Chat area */}
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <div style={{
-                  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
-                  padding: '14px 16px', borderRadius: '18px 18px 18px 4px',
-                  maxWidth: '82%', fontSize: 13, color: '#cbd5e1', lineHeight: 1.5,
-                }}>
-                  Can you explain the difference between a stack and a queue based on my notes?
-                </div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <div style={{
-                  background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
-                  padding: '16px 18px', borderRadius: '18px 18px 4px 18px',
-                  maxWidth: '88%', fontSize: 13, color: '#fff', lineHeight: 1.6,
-                  boxShadow: '0 4px 20px rgba(124,58,237,0.4)',
-                }}>
-                  Based on your <span style={{ fontWeight: 700, textDecoration: 'underline' }}>Lecture 4 notes (page 3)</span>,
-                  a Stack uses LIFO (Last-In, First-Out), while a Queue uses FIFO (First-In, First-Out).
-                  <div style={{
-                    marginTop: 10, paddingTop: 10,
-                    borderTop: '1px solid rgba(255,255,255,0.2)',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    fontSize: 10, opacity: 0.85, fontWeight: 600,
-                  }}>
-                    <ShieldCheck style={{ width: 11, height: 11 }} /> Confidence: 98%
-                  </div>
-                </div>
-              </div>
+              {/* Outer rotating ring */}
+              <circle cx="200" cy="200" r="160" fill="none" stroke="rgba(124,58,237,0.1)" strokeWidth="0.5">
+                <animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur="60s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="200" cy="200" r="120" fill="none" stroke="rgba(124,58,237,0.08)" strokeWidth="0.5" strokeDasharray="4 8">
+                <animateTransform attributeName="transform" type="rotate" from="360 200 200" to="0 200 200" dur="45s" repeatCount="indefinite" />
+              </circle>
 
-              {/* Voice bar */}
-              <div style={{
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                padding: '12px 14px', borderRadius: 14,
-                display: 'flex', alignItems: 'center', gap: 12,
-              }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: 10,
-                  background: 'rgba(124,58,237,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Mic style={{ width: 15, height: 15, color: '#a78bfa' }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden', marginBottom: 5 }}>
-                    <div style={{ height: '100%', width: '65%', background: 'linear-gradient(90deg, #7C3AED, #38bdf8)', borderRadius: 99 }} />
-                  </div>
-                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500 }}>Processing voice question...</span>
-                </div>
-              </div>
-            </div>
+              {/* 8-pointed nova star lines */}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
+                const rad = (angle * Math.PI) / 180;
+                const innerR = 20;
+                const outerR = 150;
+                const x1 = 200 + Math.cos(rad) * innerR;
+                const y1 = 200 + Math.sin(rad) * innerR;
+                const x2 = 200 + Math.cos(rad) * outerR;
+                const y2 = 200 + Math.sin(rad) * outerR;
+                return (
+                  <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+                    stroke="url(#novaGrad1)" strokeWidth="1.5" strokeLinecap="round"
+                    filter="url(#novaGlow)" opacity="0"
+                  >
+                    <animate attributeName="opacity" values="0;0.9;0.5" dur="3s" begin={`${i * 0.3}s`} fill="freeze" />
+                    <animate attributeName="strokeWidth" values="0;2.5;1.5" dur="3s" begin={`${i * 0.3}s`} fill="freeze" />
+                  </line>
+                );
+              })}
 
-            {/* Input bar */}
-            <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 12, padding: '10px 16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              }}>
-                <span style={{ fontSize: 12, color: '#4b5563' }}>Ask anything about your notes...</span>
-                <ArrowRight style={{ width: 15, height: 15, color: '#7C3AED' }} />
-              </div>
-            </div>
+              {/* Secondary shorter rays between main rays */}
+              {[22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5].map((angle, i) => {
+                const rad = (angle * Math.PI) / 180;
+                const innerR = 30;
+                const outerR = 90;
+                const x1 = 200 + Math.cos(rad) * innerR;
+                const y1 = 200 + Math.sin(rad) * innerR;
+                const x2 = 200 + Math.cos(rad) * outerR;
+                const y2 = 200 + Math.sin(rad) * outerR;
+                return (
+                  <line key={`s${i}`} x1={x1} y1={y1} x2={x2} y2={y2}
+                    stroke="url(#novaGrad2)" strokeWidth="1" strokeLinecap="round"
+                    filter="url(#novaGlow)" opacity="0"
+                  >
+                    <animate attributeName="opacity" values="0;0.6;0.3" dur="2.5s" begin={`${2.4 + i * 0.2}s`} fill="freeze" />
+                  </line>
+                );
+              })}
+
+              {/* Connecting diamond shape */}
+              <polygon
+                points="200,60 340,200 200,340 60,200"
+                fill="none" stroke="rgba(124,58,237,0.15)" strokeWidth="0.8"
+                strokeDasharray="600" strokeDashoffset="600"
+              >
+                <animate attributeName="stroke-dashoffset" from="600" to="0" dur="4s" begin="1s" fill="freeze" />
+              </polygon>
+
+              {/* Inner octagon */}
+              <polygon
+                points="200,120 256,144 280,200 256,256 200,280 144,256 120,200 144,144"
+                fill="none" stroke="rgba(167,139,250,0.2)" strokeWidth="0.6"
+                strokeDasharray="500" strokeDashoffset="500"
+              >
+                <animate attributeName="stroke-dashoffset" from="500" to="0" dur="3.5s" begin="2s" fill="freeze" />
+              </polygon>
+
+              {/* Center pulsing orb */}
+              <circle cx="200" cy="200" r="8" fill="#7C3AED" filter="url(#novaGlowBig)" opacity="0">
+                <animate attributeName="opacity" values="0;1" dur="1s" begin="0.5s" fill="freeze" />
+                <animate attributeName="r" values="5;12;8" dur="3s" begin="0.5s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="200" cy="200" r="4" fill="#c084fc" opacity="0">
+                <animate attributeName="opacity" values="0;1" dur="1s" begin="0.8s" fill="freeze" />
+              </circle>
+
+              {/* Tiny orbiting dots */}
+              {[0, 120, 240].map((startAngle, i) => (
+                <circle key={`orb${i}`} cx="200" cy="200" r="2"
+                  fill={['#c084fc', '#67e8f9', '#a78bfa'][i]}
+                  filter="url(#novaGlow)" opacity="0.7"
+                >
+                  <animateMotion
+                    path={`M0,0 a${80 + i * 30},${80 + i * 30} 0 1,1 0.01,0`}
+                    dur={`${8 + i * 4}s`} begin={`${3 + i}s`} repeatCount="indefinite"
+                  />
+                </circle>
+              ))}
+
+              {/* Endpoint dots on rays */}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
+                const rad = (angle * Math.PI) / 180;
+                const cx = 200 + Math.cos(rad) * 150;
+                const cy = 200 + Math.sin(rad) * 150;
+                return (
+                  <circle key={`dot${i}`} cx={cx} cy={cy} r="2.5"
+                    fill="#a78bfa" filter="url(#novaGlow)" opacity="0"
+                  >
+                    <animate attributeName="opacity" values="0;0.8" dur="1s" begin={`${i * 0.3 + 2}s`} fill="freeze" />
+                    <animate attributeName="r" values="2;3.5;2" dur="4s" begin={`${i * 0.3 + 2}s`} repeatCount="indefinite" />
+                  </circle>
+                );
+              })}
+            </svg>
           </div>
         </header>
 

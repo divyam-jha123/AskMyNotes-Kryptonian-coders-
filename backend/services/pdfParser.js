@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const pdfParseModule = require('pdf-parse');
-const pdfParse = pdfParseModule.default || pdfParseModule;
+const { PDFParse } = require('pdf-parse');
 
 /**
  * Parse a file (PDF or TXT) and return raw text with page info.
@@ -26,14 +25,13 @@ async function parseFile(filePath, originalName) {
 async function parsePDF(filePath) {
     const buffer = fs.readFileSync(filePath);
 
-    // pdf-parse doesn't give per-page text out of the box in all cases,
-    // so we'll treat the whole document as page 1 for simplicity
-    // and split on form-feed characters if present.
-    const data = await pdfParse(buffer);
-    const rawText = data.text || '';
+    // pdf-parse v2 uses a class-based API
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    const data = await parser.getText();
+    const rawText = typeof data === 'string' ? data : (data?.text || '');
 
     // Attempt page splitting via form-feed characters
-    const rawPages = rawText.split('\f').filter((p) => p.trim().length > 0);
+    const rawPages = rawText.split('\\f').filter((p) => p.trim().length > 0);
     const pages = rawPages.map((text, i) => ({ page: i + 1, text: text.trim() }));
 
     return {

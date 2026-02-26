@@ -1,104 +1,54 @@
-/**
- * In-memory vector store using TF-IDF similarity.
- * No external API calls for embeddings — fully self-contained.
- */
-
-// In-memory storage: subjectId -> { ids[], documents[], metadatas[] }
-const collections = {};
-
-function getCollection(subjectId) {
-    if (!collections[subjectId]) {
-        collections[subjectId] = { ids: [], documents: [], metadatas: [] };
-    }
-    return collections[subjectId];
-}
-
-// --- TF-IDF helpers ---
-
-function tokenize(text) {
-    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean);
-}
-
-function termFrequency(tokens) {
-    const tf = {};
-    for (const t of tokens) {
-        tf[t] = (tf[t] || 0) + 1;
-    }
-    // Normalize
-    const len = tokens.length || 1;
-    for (const t in tf) tf[t] /= len;
-    return tf;
-}
-
-function cosineSim(tfA, tfB) {
-    const allTerms = new Set([...Object.keys(tfA), ...Object.keys(tfB)]);
-    let dot = 0, magA = 0, magB = 0;
-    for (const t of allTerms) {
-        const a = tfA[t] || 0;
-        const b = tfB[t] || 0;
-        dot += a * b;
-        magA += a * a;
-        magB += b * b;
-    }
-    return dot / (Math.sqrt(magA) * Math.sqrt(magB) || 1);
-}
+const Chunk = require('../models/chunk');
 
 /**
- * Add chunks to the store for a given subject.
+ * Persist chunks to MongoDB instead of in-memory.
  */
 async function addChunks(subjectId, chunks, noteId) {
-    const col = getCollection(subjectId);
-    for (let i = 0; i < chunks.length; i++) {
-        col.ids.push(`${noteId}_chunk_${i}`);
-        col.documents.push(chunks[i].content);
-        col.metadatas.push({ ...chunks[i].metadata, noteId });
-    }
-    console.log(`[VectorStore] Added ${chunks.length} chunks for subject ${subjectId}`);
+    const docs = chunks.map((c, i) => ({
+        subjectId,
+        noteId,
+        content: c.content,
+        metadata: { ...c.metadata, noteId },
+    }));
+    await Chunk.insertMany(docs);
+    console.log(`[VectorStore] Persisted ${chunks.length} chunks to MongoDB for subject ${subjectId}`);
 }
 
 /**
- * Query for the most relevant chunks using TF-IDF cosine similarity.
+ * Query for the most relevant chunks using MongoDB text search.
  */
 async function queryChunks(subjectId, query, topK = 5) {
-    const col = collections[subjectId];
-    if (!col || col.documents.length === 0) return [];
+    // Basic text search in MongoDB
+    const chunks = await Chunk.find(
+        { subjectId, $text: { $search: query } },
+        { score: { $meta: "textScore" } }
+    )
+        .sort({ score: { $meta: "textScore" } })
+        .limit(topK);
 
-    const queryTF = termFrequency(tokenize(query));
+    // fall back to loading most recent chunks if text search returns nothing
+    if (chunks.length === 0) {
+        return await Chunk.find({ subjectId }).sort({ createdAt: -1 }).limit(topK);
+    }
 
-    const scored = col.documents.map((doc, i) => ({
-        content: doc,
-        metadata: col.metadatas[i],
-        score: cosineSim(queryTF, termFrequency(tokenize(doc))),
+    return chunks.map(c => ({
+        content: c.content,
+        metadata: c.metadata
     }));
-
-    scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, topK).map(({ content, metadata }) => ({ content, metadata }));
 }
 
 /**
  * Remove all chunks belonging to a specific note.
  */
 async function removeNoteChunks(subjectId, noteId) {
-    const col = collections[subjectId];
-    if (!col) return;
-
-    const keep = [];
-    for (let i = 0; i < col.ids.length; i++) {
-        if (col.metadatas[i].noteId !== noteId) keep.push(i);
-    }
-
-    collections[subjectId] = {
-        ids: keep.map((i) => col.ids[i]),
-        documents: keep.map((i) => col.documents[i]),
-        metadatas: keep.map((i) => col.metadatas[i]),
-    };
+    await Chunk.deleteMany({ subjectId, noteId });
 }
 
 /**
  * Delete the entire collection for a subject.
  */
 async function deleteSubjectCollection(subjectId) {
-    delete collections[subjectId];
+    await Chunk.deleteMany({ subjectId });
 }
 
 module.exports = {

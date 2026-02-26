@@ -15,7 +15,6 @@
     "@clerk/express": "^1.7.74",
     "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^3.0.3",
-    "chromadb": "^3.3.1",
     "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

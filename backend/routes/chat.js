@@ -37,8 +37,8 @@ router.get('/history/all', auth, async (req, res) => {
 
         return res.json(result);
     } catch (err) {
-        console.error('Get all histories error:', err);
-        return res.status(500).json({ message: 'Internal server error.' });
+        console.error('[Chat History] Get all histories error:', err.message);
+        return res.status(500).json({ message: 'Internal server error.', details: err.message });
     }
 });
 
@@ -104,8 +104,8 @@ router.post('/:subjectId', auth, async (req, res) => {
 
         return res.json(answer);
     } catch (err) {
-        console.error('Chat error:', err);
-        return res.status(500).json({ message: err.message || 'Internal server error.' });
+        console.error('[Chat] Chat error:', err.message);
+        return res.status(500).json({ message: err.message || 'Internal server error.', details: err.message });
     }
 });
 
@@ -119,8 +119,8 @@ router.get('/:subjectId/history', auth, async (req, res) => {
 
         return res.json(chatHistory ? chatHistory.messages : []);
     } catch (err) {
-        console.error('Get history error:', err);
-        return res.status(500).json({ message: 'Internal server error.' });
+        console.error('[Chat] Get history error:', err.message);
+        return res.status(500).json({ message: 'Internal server error.', details: err.message });
     }
 });
 

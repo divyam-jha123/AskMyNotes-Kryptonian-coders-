@@ -26,8 +26,8 @@ router.post('/', auth, async (req, res) => {
 
         return res.status(201).json(subject);
     } catch (err) {
-        console.error('Create subject error:', err);
-        return res.status(500).json({ message: 'Internal server error.' });
+        console.error('[Subjects] Create error:', err.message);
+        return res.status(500).json({ message: 'Internal server error.', details: err.message });
     }
 });
 
@@ -53,8 +53,8 @@ router.get('/:id', auth, async (req, res) => {
         }
         return res.json(subject);
     } catch (err) {
-        console.error('Get subject error:', err);
-        return res.status(500).json({ message: 'Internal server error.' });
+        console.error('[Subjects] Get specific error:', err.message);
+        return res.status(500).json({ message: 'Internal server error.', details: err.message });
     }
 });
 
@@ -71,8 +71,8 @@ router.delete('/:id', auth, async (req, res) => {
 
         return res.json({ message: 'Subject deleted successfully.' });
     } catch (err) {
-        console.error('Delete subject error:', err);
-        return res.status(500).json({ message: 'Internal server error.' });
+        console.error('[Subjects] Delete error:', err.message);
+        return res.status(500).json({ message: 'Internal server error.', details: err.message });
     }
 });
 

@@ -16,13 +16,11 @@ const messageSchema = new mongoose.Schema({
 const chatHistorySchema = new mongoose.Schema(
     {
         userId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            type: String,
             required: true,
         },
         subjectId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Subject',
+            type: String,
             required: true,
         },
         messages: [messageSchema],

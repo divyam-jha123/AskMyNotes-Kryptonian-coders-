@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -118,11 +118,80 @@ const GlobalStyles = () => (
       pointer-events: none;
       z-index: 0;
     }
+    html {
+      scroll-behavior: smooth;
+    }
   `}</style>
 );
 
 /* ─── Main Component ─── */
 const LandingPage = () => {
+  const [rotation, setRotation] = useState({ x: -10, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, rotX: 0, rotY: 0 });
+  const svgRef = useRef(null);
+
+  const handleMove = React.useCallback((e) => {
+    if (!isDragging) return;
+    
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    if (clientX === undefined || clientY === undefined) return;
+
+    const deltaX = (clientX - dragStart.current.x) * 0.5;
+    const deltaY = (clientY - dragStart.current.y) * 0.5;
+    
+    setRotation({
+      x: dragStart.current.rotX - deltaY,
+      y: dragStart.current.rotY + deltaX
+    });
+  }, [isDragging]);
+
+  const startDragging = (e) => {
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    dragStart.current = { x: clientX, y: clientY, rotX: rotation.x, rotY: rotation.y };
+    setIsDragging(true);
+  };
+
+  const stopDragging = React.useCallback(() => setIsDragging(false), []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', stopDragging);
+      window.addEventListener('touchmove', handleMove);
+      window.addEventListener('touchend', stopDragging);
+    } else {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', stopDragging);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', stopDragging);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', stopDragging);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', stopDragging);
+    };
+  }, [isDragging, handleMove, stopDragging]);
+
+  useEffect(() => {
+    let frameId;
+    const animate = () => {
+      if (!isDragging) {
+        setRotation(prev => ({
+          x: prev.x + 0.12,
+          y: prev.y + 0.18
+        }));
+      }
+      frameId = requestAnimationFrame(animate);
+    };
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, [isDragging]);
+
   return (
     <div
       style={{
@@ -138,10 +207,6 @@ const LandingPage = () => {
 
       {/* Starfield */}
       <StarField />
-
-      {/* Shooting star */}
-      <div className="shooting-star" style={{ top: '12%', left: '20%', animationDelay: '1s' }} />
-      <div className="shooting-star" style={{ top: '35%', left: '60%', animationDelay: '5s' }} />
 
       {/* Nebula glows */}
       <div
@@ -183,7 +248,7 @@ const LandingPage = () => {
             <a href="#features" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
                onMouseOver={e => e.target.style.color='#ffffff'}
                onMouseOut={e => e.target.style.color='#94a3b8'}>Features</a>
-            <a href="#howit" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
+            <a href="#how-it-works" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
                onMouseOver={e => e.target.style.color='#ffffff'}
                onMouseOut={e => e.target.style.color='#94a3b8'}>How it Works</a>
             <a href="#pricing" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
@@ -288,141 +353,165 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* ── Nova Star Animation ── */}
+          {/* ── Interactive 3D Network of Lines (The Neural Web) ── */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px 0 40px',
-          }}>
-            <svg viewBox="0 0 400 400" width="420" height="420" style={{ overflow: 'visible' }}>
-              <defs>
-                <linearGradient id="novaGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#7C3AED" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.8" />
-                </linearGradient>
-                <linearGradient id="novaGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#c084fc" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="#818cf8" stopOpacity="0.6" />
-                </linearGradient>
-                <filter id="novaGlow">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-                <filter id="novaGlowBig">
-                  <feGaussianBlur stdDeviation="8" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
+            padding: '40px 0 60px',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            perspective: '1200px',
+            userSelect: 'none',
+          }}
+          onMouseDown={startDragging}
+          onTouchStart={startDragging}
+          >
+            <div
+              style={{
+                width: 480,
+                height: 480,
+                position: 'relative',
+                transformStyle: 'preserve-3d',
+                transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
+                transition: isDragging ? 'none' : 'transform 1s cubic-bezier(0.1, 0.9, 0.2, 1)',
+              }}
+            >
+              {/* Central Core Glow */}
+              <div style={{
+                position: 'absolute', left: '50%', top: '50%',
+                width: 100, height: 100,
+                background: 'radial-gradient(circle, rgba(124,58,237,0.4) 0%, transparent 70%)',
+                transform: 'translate(-50%, -50%) translateZ(0px)',
+                filter: 'blur(30px)',
+              }} />
 
-              {/* Outer rotating ring */}
-              <circle cx="200" cy="200" r="160" fill="none" stroke="rgba(124,58,237,0.1)" strokeWidth="0.5">
-                <animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur="60s" repeatCount="indefinite" />
-              </circle>
-              <circle cx="200" cy="200" r="120" fill="none" stroke="rgba(124,58,237,0.08)" strokeWidth="0.5" strokeDasharray="4 8">
-                <animateTransform attributeName="transform" type="rotate" from="360 200 200" to="0 200 200" dur="45s" repeatCount="indefinite" />
-              </circle>
+              {/* Subtle 3D Skeletal Sphere - With selective moving inner lines */}
+              {useMemo(() => {
+                const orbitCount = 24; 
+                return Array.from({ length: orbitCount }, (_, i) => {
+                  const rotY = (i / orbitCount) * 180;
+                  const rotX = (i % 6) * 30;
+                  const color = ['#7C3AED', '#3b82f6', '#06b6d4'][i % 3];
+                  const radius = 160 + (i % 4) * 10;
+                  const isMoving = i % 4 === 0; // Only animate some lines
+                  
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        position: 'absolute', inset: -60,
+                        transformStyle: 'preserve-3d',
+                        transform: `rotateX(${rotX}deg) rotateY(${rotY}deg)`,
+                      }}
+                    >
+                      <svg viewBox="0 0 400 400" width="100%" height="100%" style={{ overflow: 'visible' }}>
+                        <circle 
+                          cx="200" cy="200" r={radius} 
+                          fill="none" 
+                          stroke={color} 
+                          strokeWidth="0.8" 
+                          opacity={isMoving ? 0.35 : 0.15}
+                          strokeDasharray={isMoving ? "60 120" : "none"}
+                        >
+                          {isMoving && (
+                            <animate 
+                              attributeName="stroke-dashoffset" 
+                              from="540" to="0" 
+                              dur="10s" 
+                              repeatCount="indefinite" 
+                            />
+                          )}
+                        </circle>
+                        {/* Subtle secondary arc for depth */}
+                        <path 
+                          d={`M ${200 - radius} 200 A ${radius} ${radius} 0 0 1 ${200 + radius} 200`}
+                          fill="none"
+                          stroke={color}
+                          strokeWidth="1.2"
+                          opacity="0.25"
+                        />
+                      </svg>
+                    </div>
+                  );
+                });
+              }, [])}
 
-              {/* 8-pointed nova star lines */}
-              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
-                const rad = (angle * Math.PI) / 180;
-                const innerR = 20;
-                const outerR = 150;
-                const x1 = 200 + Math.cos(rad) * innerR;
-                const y1 = 200 + Math.sin(rad) * innerR;
-                const x2 = 200 + Math.cos(rad) * outerR;
-                const y2 = 200 + Math.sin(rad) * outerR;
-                return (
-                  <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-                    stroke="url(#novaGrad1)" strokeWidth="1.5" strokeLinecap="round"
-                    filter="url(#novaGlow)" opacity="0"
-                  >
-                    <animate attributeName="opacity" values="0;0.9;0.5" dur="3s" begin={`${i * 0.3}s`} fill="freeze" />
-                    <animate attributeName="strokeWidth" values="0;2.5;1.5" dur="3s" begin={`${i * 0.3}s`} fill="freeze" />
-                  </line>
-                );
-              })}
-
-              {/* Secondary shorter rays between main rays */}
-              {[22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5].map((angle, i) => {
-                const rad = (angle * Math.PI) / 180;
-                const innerR = 30;
-                const outerR = 90;
-                const x1 = 200 + Math.cos(rad) * innerR;
-                const y1 = 200 + Math.sin(rad) * innerR;
-                const x2 = 200 + Math.cos(rad) * outerR;
-                const y2 = 200 + Math.sin(rad) * outerR;
-                return (
-                  <line key={`s${i}`} x1={x1} y1={y1} x2={x2} y2={y2}
-                    stroke="url(#novaGrad2)" strokeWidth="1" strokeLinecap="round"
-                    filter="url(#novaGlow)" opacity="0"
-                  >
-                    <animate attributeName="opacity" values="0;0.6;0.3" dur="2.5s" begin={`${2.4 + i * 0.2}s`} fill="freeze" />
-                  </line>
-                );
-              })}
-
-              {/* Connecting diamond shape */}
-              <polygon
-                points="200,60 340,200 200,340 60,200"
-                fill="none" stroke="rgba(124,58,237,0.15)" strokeWidth="0.8"
-                strokeDasharray="600" strokeDashoffset="600"
-              >
-                <animate attributeName="stroke-dashoffset" from="600" to="0" dur="4s" begin="1s" fill="freeze" />
-              </polygon>
-
-              {/* Inner octagon */}
-              <polygon
-                points="200,120 256,144 280,200 256,256 200,280 144,256 120,200 144,144"
-                fill="none" stroke="rgba(167,139,250,0.2)" strokeWidth="0.6"
-                strokeDasharray="500" strokeDashoffset="500"
-              >
-                <animate attributeName="stroke-dashoffset" from="500" to="0" dur="3.5s" begin="2s" fill="freeze" />
-              </polygon>
-
-              {/* Center pulsing orb */}
-              <circle cx="200" cy="200" r="8" fill="#7C3AED" filter="url(#novaGlowBig)" opacity="0">
-                <animate attributeName="opacity" values="0;1" dur="1s" begin="0.5s" fill="freeze" />
-                <animate attributeName="r" values="5;12;8" dur="3s" begin="0.5s" repeatCount="indefinite" />
-              </circle>
-              <circle cx="200" cy="200" r="4" fill="#c084fc" opacity="0">
-                <animate attributeName="opacity" values="0;1" dur="1s" begin="0.8s" fill="freeze" />
-              </circle>
-
-              {/* Tiny orbiting dots */}
-              {[0, 120, 240].map((startAngle, i) => (
-                <circle key={`orb${i}`} cx="200" cy="200" r="2"
-                  fill={['#c084fc', '#67e8f9', '#a78bfa'][i]}
-                  filter="url(#novaGlow)" opacity="0.7"
-                >
-                  <animateMotion
-                    path={`M0,0 a${80 + i * 30},${80 + i * 30} 0 1,1 0.01,0`}
-                    dur={`${8 + i * 4}s`} begin={`${3 + i}s`} repeatCount="indefinite"
-                  />
-                </circle>
-              ))}
-
-              {/* Endpoint dots on rays */}
-              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
-                const rad = (angle * Math.PI) / 180;
-                const cx = 200 + Math.cos(rad) * 150;
-                const cy = 200 + Math.sin(rad) * 150;
-                return (
-                  <circle key={`dot${i}`} cx={cx} cy={cy} r="2.5"
-                    fill="#a78bfa" filter="url(#novaGlow)" opacity="0"
-                  >
-                    <animate attributeName="opacity" values="0;0.8" dur="1s" begin={`${i * 0.3 + 2}s`} fill="freeze" />
-                    <animate attributeName="r" values="2;3.5;2" dur="4s" begin={`${i * 0.3 + 2}s`} repeatCount="indefinite" />
-                  </circle>
-                );
-              })}
-            </svg>
+              {/* Static Central Core Plate */}
+              <div style={{
+                position: 'absolute', left: '50%', top: '50%',
+                width: 100, height: 100,
+                transform: 'translate(-50%, -50%) translateZ(0px)',
+              }}>
+                 <svg viewBox="0 0 400 400" width="100%" height="100%">
+                    <circle cx="200" cy="200" r="8" fill="#7C3AED" opacity="0.3" />
+                 </svg>
+              </div>
+            </div>
           </div>
         </header>
+
+        {/* ── How It Works ── */}
+        <section id="how-it-works" style={{ padding: '80px 40px', background: 'rgba(255,255,255,0.01)' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 64 }}>
+              <span style={{ color: '#a78bfa', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Workflow</span>
+              <h2 style={{ fontSize: '2.4rem', fontWeight: 800, color: '#f1f5f9', margin: '12px 0 14px', letterSpacing: '-1px' }}>
+                How it works
+              </h2>
+              <p style={{ color: '#64748b', maxWidth: 540, margin: '0 auto', lineHeight: 1.6 }}>
+                Master any subject in three simple steps. No more guessing, just grounded learning.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40, position: 'relative' }}>
+              {/* Connecting lines for desktop */}
+              <div style={{ 
+                position: 'absolute', top: 45, left: '20%', right: '20%', height: 1, 
+                background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.3), transparent)',
+                zIndex: 0,
+                display: 'block'
+              }} className="mobile-hide" />
+
+              {[
+                { 
+                  num: '01', 
+                  title: 'Upload your PDF', 
+                  desc: 'Just drag and drop your study material, lecture notes, or textbooks into the workspace.',
+                  icon: <UploadCloud style={{ width: 24, height: 24, color: '#a78bfa' }} />
+                },
+                { 
+                  num: '02', 
+                  title: 'Ask your doubt', 
+                  desc: 'Whatever your confusion regarding the PDF or any complex concept within it, just ask naturally.',
+                  icon: <MessageSquare style={{ width: 24, height: 24, color: '#60a5fa' }} />
+                },
+                { 
+                  num: '03', 
+                  title: 'Get instant clarity', 
+                  desc: 'The AI explains the concept using only your document as the source of truth, ensuring 100% accuracy.',
+                  icon: <Zap style={{ width: 24, height: 24, color: '#22d3ee' }} />
+                }
+              ].map((step, i) => (
+                <div key={i} style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                  <div style={{
+                    width: 90, height: 90, borderRadius: '50%',
+                    background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 24px', position: 'relative',
+                    boxShadow: '0 0 30px rgba(124,58,237,0.1)'
+                  }}>
+                    <span style={{ 
+                      position: 'absolute', top: -5, right: -5,
+                      background: '#7C3AED', color: '#fff', fontSize: 10, fontWeight: 900,
+                      padding: '4px 8px', borderRadius: 8,
+                    }}>{step.num}</span>
+                    {step.icon}
+                  </div>
+                  <h3 style={{ fontSize: 19, fontWeight: 700, color: '#f8fafc', marginBottom: 12 }}>{step.title}</h3>
+                  <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: 0 }}>{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* ── Features ── */}
         <section id="features" style={{
@@ -514,6 +603,90 @@ const LandingPage = () => {
                   </div>
                   <div style={{ fontSize: '2rem', fontWeight: 800, color: '#f1f5f9', marginBottom: 4 }}>{s.val}</div>
                   <div style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Pricing ── */}
+        <section id="pricing" style={{ padding: '80px 40px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 64 }}>
+              <span style={{ color: '#a78bfa', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Pricing Plans</span>
+              <h2 style={{ fontSize: '2.4rem', fontWeight: 800, color: '#f1f5f9', margin: '12px 0 14px', letterSpacing: '-1px' }}>
+                Simple, transparent pricing for everyone
+              </h2>
+              <p style={{ color: '#64748b', maxWidth: 540, margin: '0 auto', lineHeight: 1.6 }}>
+                Choose the plan that fits your learning journey. From solo students to large institutions.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
+              {[
+                { 
+                  name: 'Student', 
+                  price: '0', 
+                  period: '/ forever',
+                  desc: 'Perfect for individual learners starting their journey.',
+                  features: ['3 Subject Scopes', 'Basic AI Q&A', '100MB Storage', 'Community Support']
+                },
+                { 
+                  name: 'Individual', 
+                  price: '10', 
+                  period: '/ month',
+                  desc: 'Unlock full power with advanced AI and more storage.',
+                  features: ['Unlimited Subjects', 'Advanced Grounding', '2GB Storage', 'Priority Email Support', 'Voice Interaction'],
+                  popular: true
+                },
+                { 
+                  name: 'Schools & Colleges', 
+                  price: '15', 
+                  period: '/ user / mo',
+                  desc: 'Designed for high-impact institutional learning.',
+                  features: ['Bulk User Management', 'LMS Integration', 'Unlimited Storage', 'Dedicated Success Manager', 'Advanced Analytics']
+                }
+              ].map((plan, i) => (
+                <div key={i} className="card-dark" style={{
+                  padding: '48px 40px', borderRadius: 32,
+                  display: 'flex', flexDirection: 'column', gap: 32,
+                  position: 'relative',
+                  border: plan.popular ? '1px solid rgba(124,58,237,0.5)' : '1px solid rgba(255,255,255,0.08)',
+                  background: plan.popular ? 'rgba(124,58,237,0.05)' : 'rgba(255,255,255,0.02)',
+                }}>
+                  {plan.popular && (
+                    <div style={{
+                      position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)',
+                      background: '#7C3AED', color: '#fff', fontSize: 11, fontWeight: 800,
+                      padding: '6px 16px', borderRadius: 99, textTransform: 'uppercase', letterSpacing: '0.05em'
+                    }}>Most Popular</div>
+                  )}
+                  <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>{plan.name}</h3>
+                    <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>{plan.desc}</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span style={{ fontSize: '3rem', fontWeight: 900, color: '#fff' }}>${plan.price}</span>
+                    <span style={{ fontSize: 14, color: '#64748b' }}>{plan.period}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {plan.features.map((feature, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <ShieldCheck style={{ width: 18, height: 18, color: '#a78bfa' }} />
+                        <span style={{ fontSize: 14, color: '#94a3b8' }}>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Link to="/signup" className={plan.popular ? "btn-primary" : ""} style={{
+                    marginTop: 'auto', textAlign: 'center', textDecoration: 'none',
+                    padding: '14px 24px', borderRadius: 16, fontSize: 14, fontWeight: 700,
+                    background: plan.popular ? undefined : 'rgba(255,255,255,0.05)',
+                    color: plan.popular ? '#fff' : '#e2e8f0',
+                    border: plan.popular ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                    transition: 'all 0.2s'
+                  }}>
+                    {plan.price === '0' ? 'Get Started' : 'Start Free Trial'}
+                  </Link>
                 </div>
               ))}
             </div>

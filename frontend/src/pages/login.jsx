@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useSignIn } from "@clerk/clerk-react";
 import { login } from "../api/auth";
 
 const Login = () => {
+  const navigate = useNavigate();
   const { signIn, isLoaded: isClerkLoaded } = useSignIn();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -23,6 +24,7 @@ const Login = () => {
       const data = await login({ email, password });
       localStorage.setItem("user", JSON.stringify(data.user));
       setSuccess(`Welcome back, ${data.user.username}!`);
+      setTimeout(() => navigate("/dashboard"), 1000);
     } catch (err) {
       setError(err.message);
     } finally {

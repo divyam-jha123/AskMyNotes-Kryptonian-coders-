@@ -7,6 +7,41 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// GET /api/chat/history/all — Get all chat histories for the user
+router.get('/history/all', auth, async (req, res) => {
+    try {
+        const chatHistories = await ChatHistory.find({ userId: req.user.id })
+            .sort({ updatedAt: -1 })
+            .lean();
+
+        // Fetch subject names for all histories
+        const subjectIds = chatHistories.map(h => h.subjectId);
+        const subjects = await Subject.find({ _id: { $in: subjectIds } }).lean();
+        const subjectMap = {};
+        subjects.forEach(s => { subjectMap[s._id.toString()] = s.name; });
+
+        const result = chatHistories.map(h => {
+            const lastMsg = h.messages && h.messages.length > 0
+                ? h.messages[h.messages.length - 1]
+                : null;
+            return {
+                _id: h._id,
+                subjectId: h.subjectId,
+                subjectName: subjectMap[h.subjectId.toString()] || 'Unknown Subject',
+                lastMessage: lastMsg ? lastMsg.content.slice(0, 80) : '',
+                lastMessageRole: lastMsg ? lastMsg.role : null,
+                messageCount: h.messages ? h.messages.length : 0,
+                updatedAt: h.updatedAt,
+            };
+        });
+
+        return res.json(result);
+    } catch (err) {
+        console.error('Get all histories error:', err);
+        return res.status(500).json({ message: 'Internal server error.' });
+    }
+});
+
 // POST /api/chat/:subjectId — Ask a question (RAG pipeline)
 router.post('/:subjectId', auth, async (req, res) => {
     try {

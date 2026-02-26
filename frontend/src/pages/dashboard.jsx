@@ -9,7 +9,7 @@ import {
 import {
   getSubjects, createSubject,
   uploadNote, deleteNote,
-  sendMessage, getChatHistory,
+  sendMessage, getChatHistory, getAllChatHistories,
 } from '../api/askMyNotes';
 
 // ─── Confidence Badge ───
@@ -80,6 +80,21 @@ const SlowStars = () => {
   );
 };
 
+/* ─── Relative time helper ─── */
+function timeAgo(dateStr) {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const seconds = Math.floor((now - date) / 1000);
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+}
+
 const StitchInterface = () => {
   const [device, setDevice] = useState('app');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -96,6 +111,7 @@ const StitchInterface = () => {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [chatHistories, setChatHistories] = useState([]);
 
   // Voice
   const [isListening, setIsListening] = useState(false);
@@ -126,8 +142,33 @@ const StitchInterface = () => {
         setSubjects([subject]);
         setSubjectId(subject._id);
       }
+      // Fetch all chat histories for sidebar
+      const histories = await getAllChatHistories();
+      setChatHistories(histories);
     } catch (err) {
       console.error('Init subject error:', err);
+    }
+  }
+
+  async function loadConversation(historySubjectId) {
+    try {
+      setSubjectId(historySubjectId);
+      const history = await getChatHistory(historySubjectId);
+      setMessages(history);
+      // Also load the subject's files
+      const sub = subjects.find(s => s._id === historySubjectId);
+      if (sub) setUploadedFiles(sub.notes || []);
+    } catch (err) {
+      console.error('Load conversation error:', err);
+    }
+  }
+
+  async function refreshHistories() {
+    try {
+      const histories = await getAllChatHistories();
+      setChatHistories(histories);
+    } catch (err) {
+      console.error('Refresh histories error:', err);
     }
   }
 
@@ -199,6 +240,7 @@ const StitchInterface = () => {
       setMessages((prev) => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
     } finally {
       setSending(false);
+      refreshHistories();
     }
   }
 
@@ -332,40 +374,47 @@ const StitchInterface = () => {
         zIndex: 10,
         flexShrink: 0,
       }}>
-        <div style={{ padding: 24, width: 260 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
+        <div style={{ padding: 24, width: 260, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
             <History style={{ width: 18, height: 18, color: '#a78bfa' }} />
-            <span style={{ fontWeight: 700, color: '#fff', fontSize: 14 }}>My Subjects</span>
+            <span style={{ fontWeight: 700, color: '#fff', fontSize: 14 }}>Chat History</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {subjects.map((sub) => (
-              <div 
-                key={sub._id} 
-                onClick={() => setSubjectId(sub._id)}
-                className="sidebar-item" 
-                style={{ 
-                  animation: 'fadeInUp 0.3s ease',
-                  borderColor: subjectId === sub._id ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.06)',
-                  background: subjectId === sub._id ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.03)'
-                }}
-              >
-                <p style={{ fontSize: 12, color: '#fff', margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.name}</p>
-                <p style={{ fontSize: 10, color: '#4b5563', margin: '6px 0 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {sub.notes?.length || 0} Files
-                </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, overflowY: 'auto' }} className="scrollbar-thin">
+            {chatHistories.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+                <History style={{ width: 32, height: 32, color: '#374151', margin: '0 auto 12px' }} />
+                <p style={{ fontSize: 13, color: '#4b5563', margin: 0 }}>No conversations yet</p>
+                <p style={{ fontSize: 11, color: '#374151', marginTop: 6 }}>Upload notes & start chatting!</p>
               </div>
-            ))}
-            <button 
-              onClick={() => createSubject('New Subject').then(initSubject)}
-              style={{
-                marginTop: 10, display: 'flex', alignItems: 'center', gap: 8,
-                padding: '10px 14px', borderRadius: 12, fontSize: 12,
-                background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)',
-                color: '#a78bfa', cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              <Plus size={14} /> New Subject
-            </button>
+            ) : (
+              chatHistories.map((h) => (
+                <div
+                  key={h._id}
+                  onClick={() => loadConversation(h.subjectId)}
+                  className="sidebar-item"
+                  style={{
+                    animation: 'fadeInUp 0.3s ease',
+                    borderColor: subjectId === h.subjectId ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.06)',
+                    background: subjectId === h.subjectId ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.03)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <p style={{ fontSize: 12, color: '#fff', margin: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 8 }}>
+                      {h.subjectName}
+                    </p>
+                    <span style={{ fontSize: 9, color: '#4b5563', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {timeAgo(h.updatedAt)}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 11, color: '#64748b', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+                    {h.lastMessageRole === 'user' ? 'You: ' : ''}{h.lastMessage || 'No messages'}
+                  </p>
+                  <p style={{ fontSize: 9, color: '#374151', margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {h.messageCount} messages
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </aside>
@@ -422,7 +471,7 @@ const StitchInterface = () => {
 
         {/* Main Area */}
         <main style={{ maxWidth: 900, margin: '0 auto', width: '100%', padding: '32px 40px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          
+
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
             <h2 style={{
@@ -556,7 +605,7 @@ const StitchInterface = () => {
               display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
               boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
             }}>
-              
+
               {/* Attached file cards inside input area */}
               {uploadedFiles.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
@@ -573,7 +622,7 @@ const StitchInterface = () => {
                         <p style={{ fontSize: 13, fontWeight: 600, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.originalName}</p>
                         <p style={{ fontSize: 10, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>Document</p>
                       </div>
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); handleDeleteNote(f._id); }}
                         style={{
                           position: 'absolute', top: -8, right: -8, width: 20, height: 20,
@@ -604,7 +653,7 @@ const StitchInterface = () => {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <button 
+                  <button
                     onClick={() => fileInputRef.current?.click()}
                     style={{
                       padding: 10, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)',
@@ -642,9 +691,9 @@ const StitchInterface = () => {
           {/* ─── Suggestion Prompts ─── */}
           <div style={{ width: '100%', marginTop: 40, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {suggestions.map((text, i) => (
-              <button 
-                key={i} 
-                onClick={() => setInput(text)} 
+              <button
+                key={i}
+                onClick={() => setInput(text)}
                 className="suggestion-btn"
                 disabled={uploadedFiles.length === 0}
                 style={{ opacity: uploadedFiles.length === 0 ? 0.3 : 1, cursor: uploadedFiles.length === 0 ? 'not-allowed' : 'pointer' }}

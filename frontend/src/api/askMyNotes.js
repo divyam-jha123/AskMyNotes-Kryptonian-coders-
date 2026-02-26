@@ -112,6 +112,13 @@ export async function clearChatHistory(subjectId) {
     return data;
 }
 
+export async function getAllChatHistories() {
+    const res = await fetch(`${API_BASE}/chat/history/all`, { credentials: 'include' });
+    const data = await parseJSON(res);
+    if (!res.ok) throw new Error(data.message || 'Failed to load chat histories');
+    return data;
+}
+
 // --- Study ---
 
 export async function generateStudy(subjectId, topic) {

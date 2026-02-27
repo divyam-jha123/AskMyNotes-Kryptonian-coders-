@@ -18,6 +18,14 @@
     ],
     "routes": [
         {
+            "src": "/health",
+            "dest": "backend/index.js"
+        },
+        {
+            "src": "/ping",
+            "dest": "backend/index.js"
+        },
+        {
             "src": "/api/(.*)",
             "dest": "backend/index.js"
         },

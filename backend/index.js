@@ -1,5 +1,35 @@
 require('dotenv').config();
 const express = require('express');
+
+// --- EARLY DEBUG ENDPOINTS (before complex imports) ---
+const app = express();
+
+// Minimal ping to check if function loads
+app.get('/ping', (req, res) => {
+  res.send('pong');
+});
+
+// Early health check
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    env: {
+      mongodb: !!process.env.MONGODB_URI,
+      clerk: !!process.env.CLERK_SECRET_KEY,
+      jwt: !!process.env.JWT_SECRET
+    },
+    node: process.version
+  });
+});
+
+// Global process handlers to catch production crashes
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught Exception:', err.stack || err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { clerkMiddleware } = require('@clerk/express');
@@ -15,9 +45,7 @@ const studyRoutes = require('./routes/study');
 console.log('[Backend] Starting with ENV check:');
 console.log(' - MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'MISSING');
 console.log(' - CLERK_SECRET_KEY:', process.env.CLERK_SECRET_KEY ? 'SET' : 'MISSING');
-console.log(' - PORT:', process.env.PORT || 5001);
 
-const app = express();
 const port = process.env.PORT || 5001;
 
 // Middleware
@@ -45,18 +73,6 @@ const connectToDatabase = async () => {
   return cachedDb;
 };
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    db: cachedDb ? 'connected' : 'disconnected',
-    env: {
-      mongodb: !!process.env.MONGODB_URI,
-      clerk: !!process.env.CLERK_SECRET_KEY,
-      jwt: !!process.env.JWT_SECRET
-    }
-  });
-});
 
 // Middleware to ensure DB is connected
 app.use(async (req, res, next) => {

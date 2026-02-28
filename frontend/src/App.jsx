@@ -7,7 +7,6 @@ import LandingPage from './pages/landingpage';
 import SignUp from './pages/signup';
 import Login from './pages/login';
 import Dashboard from './pages/dashboard';
-import SSOCallback from './pages/sso-callback';
 import NotFound from './pages/not-found';
 
 const queryClient = new QueryClient();
@@ -25,7 +24,6 @@ function App() {
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/sso-callback" element={<SSOCallback />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

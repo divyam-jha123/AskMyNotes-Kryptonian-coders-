@@ -1,34 +1,21 @@
 const API_BASE = '/api';
 
 /**
- * Token getter function — set by the React app to provide auth tokens.
- * This is called before every API request to get the current session token.
- */
-let _getToken = null;
-
-/**
- * Set the token getter function. Call this from a React component
- * that has access to Clerk's useAuth() hook.
- * @param {() => Promise<string|null>} fn
- */
-export function setTokenGetter(fn) {
-    _getToken = fn;
-}
-
-/**
  * Get auth headers for API requests.
- * Uses the Clerk token getter if available, otherwise relies on cookies.
+ * Uses JWT cookie (sent automatically with credentials: 'include').
+ * Also supports Bearer token from localStorage for non-cookie scenarios.
  */
 async function getAuthHeaders() {
     const headers = {};
-    if (_getToken) {
+    const user = localStorage.getItem('user');
+    if (user) {
         try {
-            const token = await _getToken();
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
+            const parsed = JSON.parse(user);
+            if (parsed.token) {
+                headers['Authorization'] = `Bearer ${parsed.token}`;
             }
         } catch (err) {
-            console.warn('[API] Token getter failed:', err.message);
+            // Ignore parse errors
         }
     }
     return headers;

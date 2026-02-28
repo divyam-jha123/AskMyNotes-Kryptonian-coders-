@@ -15,7 +15,6 @@ app.get('/health', (req, res) => {
     status: 'ok',
     env: {
       mongodb: !!process.env.MONGODB_URI,
-      clerk: !!process.env.CLERK_SECRET_KEY,
       jwt: !!process.env.JWT_SECRET
     },
     node: process.version
@@ -32,7 +31,6 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const { clerkMiddleware } = require('@clerk/express');
 const connectDb = require('./db/connection');
 
 // Routes
@@ -44,7 +42,7 @@ const studyRoutes = require('./routes/study');
 
 console.log('[Backend] Starting with ENV check:');
 console.log(' - MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'MISSING');
-console.log(' - CLERK_SECRET_KEY:', process.env.CLERK_SECRET_KEY ? 'SET' : 'MISSING');
+console.log(' - JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'MISSING');
 
 const port = process.env.PORT || 5001;
 
@@ -61,24 +59,6 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-
-// Wrap clerkMiddleware safely — if it crashes (e.g. missing CLERK_SECRET_KEY),
-// the request should still proceed so non-Clerk routes (signup/login) work.
-const clerkMw = clerkMiddleware();
-app.use((req, res, next) => {
-  try {
-    clerkMw(req, res, (err) => {
-      if (err) {
-        console.warn('[Clerk] Middleware error (non-fatal):', err.message);
-      }
-      next();
-    });
-  } catch (err) {
-    console.warn('[Clerk] Middleware crashed (non-fatal):', err.message);
-    next();
-  }
-});
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

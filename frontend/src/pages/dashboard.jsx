@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useClerk, useAuth } from '@clerk/clerk-react';
 import {
   Plus, ArrowRight, Monitor, Smartphone, Zap,
   UploadCloud, Trash2, Loader2, RefreshCw, CheckCircle2,
@@ -12,7 +11,6 @@ import {
   getSubjects, createSubject,
   uploadNote, deleteNote,
   sendMessage, getChatHistory, getAllChatHistories, clearChatHistory,
-  setTokenGetter,
 } from '../api/askMyNotes';
 
 // ─── Confidence Badge ───
@@ -100,8 +98,6 @@ function timeAgo(dateStr) {
 
 const StitchInterface = () => {
   const navigate = useNavigate();
-  const { signOut } = useClerk();
-  const { getToken, isSignedIn } = useAuth();
   const [device, setDevice] = useState('app');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
@@ -129,11 +125,6 @@ const StitchInterface = () => {
   const voiceModeRef = useRef(false); // ref to track active state in async callbacks
 
   const MAX_CHARS = 1000;
-
-  // Wire up Clerk token getter for API calls
-  useEffect(() => {
-    setTokenGetter(() => getToken());
-  }, [getToken]);
 
   // Auto-create or load a default subject on mount
   useEffect(() => {
@@ -303,12 +294,10 @@ const StitchInterface = () => {
   // ─── Manual TTS for individual messages ───
   async function handleSignOut() {
     try {
-      // 1. Sign out from Clerk
-      await signOut();
-      // 2. Clear local auth state
+      // Clear local auth state
       localStorage.removeItem('user');
       localStorage.removeItem('activeSubjectId');
-      // 3. Navigate home
+      // Navigate home
       navigate('/');
     } catch (err) {
       console.error('Sign out error:', err);

@@ -1,5 +1,11 @@
 const path = require('path');
-const { PDFParse } = require('pdf-parse');
+const pdfjsLib = require('pdfjs-dist/build/pdf');
+
+// Disable worker if not in a worker environment
+if (typeof window === 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    // In Node.js, we don't need a separate worker file if we're just parsing text
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+}
 
 /**
  * Parse a file (PDF or TXT) from a Buffer and return raw text with page info.
@@ -22,19 +28,43 @@ async function parseFile(buffer, originalName) {
 }
 
 async function parsePDFFromBuffer(buffer) {
-    // pdf-parse v2 uses a class-based API
-    const parser = new PDFParse({ data: new Uint8Array(buffer) });
-    const data = await parser.getText();
-    const rawText = typeof data === 'string' ? data : (data?.text || '');
+    try {
+        const data = new Uint8Array(buffer);
+        const loadingTask = pdfjsLib.getDocument({
+            data,
+            useSystemFonts: true,
+            disableFontFace: true,
+            verbosity: 0 // Suppress warnings
+        });
 
-    // Attempt page splitting via form-feed characters
-    const rawPages = rawText.split('\f').filter((p) => p.trim().length > 0);
-    const pages = rawPages.map((text, i) => ({ page: i + 1, text: text.trim() }));
+        const pdf = await loadingTask.promise;
+        const numPages = pdf.numPages;
+        const pages = [];
+        let fullText = '';
 
-    return {
-        text: rawText,
-        pages: pages.length > 0 ? pages : [{ page: 1, text: rawText }],
-    };
+        for (let i = 1; i <= numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const pageText = content.items
+                .map(item => item.str)
+                .join(' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            if (pageText) {
+                pages.push({ page: i, text: pageText });
+                fullText += (fullText ? '\n\n' : '') + pageText;
+            }
+        }
+
+        return {
+            text: fullText,
+            pages: pages.length > 0 ? pages : [{ page: 1, text: fullText || 'No text content found in PDF.' }],
+        };
+    } catch (err) {
+        console.error('[PDF Parser] pdfjs-dist error:', err);
+        throw new Error(`Failed to parse PDF: ${err.message}`);
+    }
 }
 
 async function parseTXTFromBuffer(buffer) {

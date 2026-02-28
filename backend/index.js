@@ -61,7 +61,24 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-app.use(clerkMiddleware());
+
+// Wrap clerkMiddleware safely — if it crashes (e.g. missing CLERK_SECRET_KEY),
+// the request should still proceed so non-Clerk routes (signup/login) work.
+const clerkMw = clerkMiddleware();
+app.use((req, res, next) => {
+  try {
+    clerkMw(req, res, (err) => {
+      if (err) {
+        console.warn('[Clerk] Middleware error (non-fatal):', err.message);
+      }
+      next();
+    });
+  } catch (err) {
+    console.warn('[Clerk] Middleware crashed (non-fatal):', err.message);
+    next();
+  }
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -80,11 +97,18 @@ app.use(async (req, res, next) => {
     if (!process.env.MONGODB_URI) {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
-    await connectToDatabase();
+    const db = await connectToDatabase();
+    if (!db && !cachedDb) {
+      throw new Error('Database connection returned undefined');
+    }
     next();
   } catch (err) {
-    console.error('DB connection error:', err.message);
-    res.status(500).json({ error: 'Database connection failed', details: err.message });
+    console.error('[DB Middleware Error]', err.message);
+    res.status(500).json({
+      error: 'Database connection failed',
+      details: err.message,
+      hint: 'Check if MONGODB_URI is correct and your IP is whitelisted in MongoDB Atlas.'
+    });
   }
 });
 

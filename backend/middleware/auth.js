@@ -9,14 +9,21 @@ const auth = async (req, res, next) => {
         if (bearerToken) {
             // Try Clerk getAuth first — the bearer token should make this work
             try {
-                const clerkAuth = getAuth(req);
+                // Use a wrapper to prevent getAuth from crashing the handler if Clerk is misconfigured
+                let clerkAuth = null;
+                try {
+                    clerkAuth = getAuth(req);
+                } catch (clerkErr) {
+                    console.warn('[Auth] Clerk getAuth threw during Bearer check:', clerkErr.message);
+                }
+
                 if (clerkAuth && clerkAuth.userId) {
                     console.log('[Auth] Clerk Session (via Bearer):', clerkAuth.userId);
                     req.user = { id: clerkAuth.userId, clerk: true };
                     return next();
                 }
             } catch (err) {
-                console.warn('[Auth] Clerk getAuth with Bearer failed:', err.message);
+                console.warn('[Auth] Clerk check with Bearer failed:', err.message);
             }
 
             // If Clerk didn't work, try as a custom JWT

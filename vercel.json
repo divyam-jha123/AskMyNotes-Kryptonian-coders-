@@ -34,6 +34,9 @@
             "dest": "backend/index.js"
         },
         {
+            "handle": "filesystem"
+        },
+        {
             "src": "/(.*)",
             "dest": "/frontend/index.html"
         }

@@ -14,8 +14,11 @@ import {
   Clock,
   Star,
   Globe,
-  Mail
+  Mail,
+  X
 } from 'lucide-react';
+
+const DEMO_VIDEO_URL = "https://res.cloudinary.com/dlxbryujc/video/upload/v1/demo/askmynotes_demo.mp4";
 
 /* ─── Starfield helpers ─── */
 function randomBetween(min, max) {
@@ -128,20 +131,21 @@ const GlobalStyles = () => (
 const LandingPage = () => {
   const [rotation, setRotation] = useState({ x: -10, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, rotX: 0, rotY: 0 });
   const svgRef = useRef(null);
 
   const handleMove = React.useCallback((e) => {
     if (!isDragging) return;
-    
+
     const clientX = e.clientX || (e.touches && e.touches[0].clientX);
     const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    
+
     if (clientX === undefined || clientY === undefined) return;
 
     const deltaX = (clientX - dragStart.current.x) * 0.5;
     const deltaY = (clientY - dragStart.current.y) * 0.5;
-    
+
     setRotation({
       x: dragStart.current.rotX - deltaY,
       y: dragStart.current.rotY + deltaX
@@ -238,7 +242,7 @@ const LandingPage = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ background: '#7C3AED', padding: 8, borderRadius: 10, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <div style={{ background: '#7C3AED', padding: 8, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap style={{ color: '#fff', width: 22, height: 22 }} />
             </div>
             <span style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>AskMyNotes</span>
@@ -246,20 +250,20 @@ const LandingPage = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 32, fontSize: 14, fontWeight: 500 }}>
             <a href="#features" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
-               onMouseOver={e => e.target.style.color='#ffffff'}
-               onMouseOut={e => e.target.style.color='#94a3b8'}>Features</a>
+              onMouseOver={e => e.target.style.color = '#ffffff'}
+              onMouseOut={e => e.target.style.color = '#94a3b8'}>Features</a>
             <a href="#how-it-works" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
-               onMouseOver={e => e.target.style.color='#ffffff'}
-               onMouseOut={e => e.target.style.color='#94a3b8'}>How it Works</a>
+              onMouseOver={e => e.target.style.color = '#ffffff'}
+              onMouseOut={e => e.target.style.color = '#94a3b8'}>How it Works</a>
             <a href="#pricing" style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
-               onMouseOver={e => e.target.style.color='#ffffff'}
-               onMouseOut={e => e.target.style.color='#94a3b8'}>Pricing</a>
+              onMouseOver={e => e.target.style.color = '#ffffff'}
+              onMouseOut={e => e.target.style.color = '#94a3b8'}>Pricing</a>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <Link to="/login" style={{ fontSize: 14, fontWeight: 500, color: '#94a3b8', textDecoration: 'none', transition: 'color 0.2s' }}
-                  onMouseOver={e => e.currentTarget.style.color='#ffffff'}
-                  onMouseOut={e => e.currentTarget.style.color='#94a3b8'}>
+              onMouseOver={e => e.currentTarget.style.color = '#ffffff'}
+              onMouseOut={e => e.currentTarget.style.color = '#94a3b8'}>
               Log In
             </Link>
             <Link to="/signup" className="btn-primary" style={{
@@ -329,8 +333,9 @@ const LandingPage = () => {
                 fontWeight: 700, fontSize: 15, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 8, transition: 'background 0.2s',
               }}
-                onMouseOver={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'}
-                onMouseOut={e => e.currentTarget.style.background='rgba(255,255,255,0.06)'}
+                onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                onClick={() => setShowVideo(true)}
               >
                 <Play style={{ width: 16, height: 16, fill: 'currentColor' }} /> Watch Demo
               </button>
@@ -338,7 +343,7 @@ const LandingPage = () => {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ display: 'flex' }}>
-                {[['JD','#7C3AED'],['AS','#3b82f6'],['ML','#6366f1']].map(([label, bg], i) => (
+                {[['JD', '#7C3AED'], ['AS', '#3b82f6'], ['ML', '#6366f1']].map(([label, bg], i) => (
                   <div key={i} style={{
                     width: 34, height: 34, borderRadius: '50%', background: bg,
                     border: '2px solid #05050a', marginLeft: i > 0 ? -10 : 0,
@@ -361,8 +366,8 @@ const LandingPage = () => {
             perspective: '1200px',
             userSelect: 'none',
           }}
-          onMouseDown={startDragging}
-          onTouchStart={startDragging}
+            onMouseDown={startDragging}
+            onTouchStart={startDragging}
           >
             <div
               style={{
@@ -385,14 +390,14 @@ const LandingPage = () => {
 
               {/* Subtle 3D Skeletal Sphere - With selective moving inner lines */}
               {useMemo(() => {
-                const orbitCount = 24; 
+                const orbitCount = 24;
                 return Array.from({ length: orbitCount }, (_, i) => {
                   const rotY = (i / orbitCount) * 180;
                   const rotX = (i % 6) * 30;
                   const color = ['#7C3AED', '#3b82f6', '#06b6d4'][i % 3];
                   const radius = 160 + (i % 4) * 10;
                   const isMoving = i % 4 === 0; // Only animate some lines
-                  
+
                   return (
                     <div
                       key={i}
@@ -403,25 +408,25 @@ const LandingPage = () => {
                       }}
                     >
                       <svg viewBox="0 0 400 400" width="100%" height="100%" style={{ overflow: 'visible' }}>
-                        <circle 
-                          cx="200" cy="200" r={radius} 
-                          fill="none" 
-                          stroke={color} 
-                          strokeWidth="0.8" 
+                        <circle
+                          cx="200" cy="200" r={radius}
+                          fill="none"
+                          stroke={color}
+                          strokeWidth="0.8"
                           opacity={isMoving ? 0.35 : 0.15}
                           strokeDasharray={isMoving ? "60 120" : "none"}
                         >
                           {isMoving && (
-                            <animate 
-                              attributeName="stroke-dashoffset" 
-                              from="540" to="0" 
-                              dur="10s" 
-                              repeatCount="indefinite" 
+                            <animate
+                              attributeName="stroke-dashoffset"
+                              from="540" to="0"
+                              dur="10s"
+                              repeatCount="indefinite"
                             />
                           )}
                         </circle>
                         {/* Subtle secondary arc for depth */}
-                        <path 
+                        <path
                           d={`M ${200 - radius} 200 A ${radius} ${radius} 0 0 1 ${200 + radius} 200`}
                           fill="none"
                           stroke={color}
@@ -440,9 +445,9 @@ const LandingPage = () => {
                 width: 100, height: 100,
                 transform: 'translate(-50%, -50%) translateZ(0px)',
               }}>
-                 <svg viewBox="0 0 400 400" width="100%" height="100%">
-                    <circle cx="200" cy="200" r="8" fill="#7C3AED" opacity="0.3" />
-                 </svg>
+                <svg viewBox="0 0 400 400" width="100%" height="100%">
+                  <circle cx="200" cy="200" r="8" fill="#7C3AED" opacity="0.3" />
+                </svg>
               </div>
             </div>
           </div>
@@ -463,29 +468,29 @@ const LandingPage = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40, position: 'relative' }}>
               {/* Connecting lines for desktop */}
-              <div style={{ 
-                position: 'absolute', top: 45, left: '20%', right: '20%', height: 1, 
+              <div style={{
+                position: 'absolute', top: 45, left: '20%', right: '20%', height: 1,
                 background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.3), transparent)',
                 zIndex: 0,
                 display: 'block'
               }} className="mobile-hide" />
 
               {[
-                { 
-                  num: '01', 
-                  title: 'Upload your PDF', 
+                {
+                  num: '01',
+                  title: 'Upload your PDF',
                   desc: 'Just drag and drop your study material, lecture notes, or textbooks into the workspace.',
                   icon: <UploadCloud style={{ width: 24, height: 24, color: '#a78bfa' }} />
                 },
-                { 
-                  num: '02', 
-                  title: 'Ask your doubt', 
+                {
+                  num: '02',
+                  title: 'Ask your doubt',
                   desc: 'Whatever your confusion regarding the PDF or any complex concept within it, just ask naturally.',
                   icon: <MessageSquare style={{ width: 24, height: 24, color: '#60a5fa' }} />
                 },
-                { 
-                  num: '03', 
-                  title: 'Get instant clarity', 
+                {
+                  num: '03',
+                  title: 'Get instant clarity',
                   desc: 'The AI explains the concept using only your document as the source of truth, ensuring 100% accuracy.',
                   icon: <Zap style={{ width: 24, height: 24, color: '#22d3ee' }} />
                 }
@@ -498,7 +503,7 @@ const LandingPage = () => {
                     margin: '0 auto 24px', position: 'relative',
                     boxShadow: '0 0 30px rgba(124,58,237,0.1)'
                   }}>
-                    <span style={{ 
+                    <span style={{
                       position: 'absolute', top: -5, right: -5,
                       background: '#7C3AED', color: '#fff', fontSize: 10, fontWeight: 900,
                       padding: '4px 8px', borderRadius: 8,
@@ -624,24 +629,24 @@ const LandingPage = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
               {[
-                { 
-                  name: 'Student', 
-                  price: '0', 
+                {
+                  name: 'Student',
+                  price: '0',
                   period: '/ forever',
                   desc: 'Perfect for individual learners starting their journey.',
                   features: ['3 Subject Scopes', 'Basic AI Q&A', '100MB Storage', 'Community Support']
                 },
-                { 
-                  name: 'Individual', 
-                  price: '10', 
+                {
+                  name: 'Individual',
+                  price: '10',
                   period: '/ month',
                   desc: 'Unlock full power with advanced AI and more storage.',
                   features: ['Unlimited Subjects', 'Advanced Grounding', '2GB Storage', 'Priority Email Support', 'Voice Interaction'],
                   popular: true
                 },
-                { 
-                  name: 'Schools & Colleges', 
-                  price: '15', 
+                {
+                  name: 'Schools & Colleges',
+                  price: '15',
                   period: '/ user / mo',
                   desc: 'Designed for high-impact institutional learning.',
                   features: ['Bulk User Management', 'LMS Integration', 'Unlimited Storage', 'Dedicated Success Manager', 'Advanced Analytics']
@@ -727,8 +732,8 @@ const LandingPage = () => {
                 color: '#e2e8f0', padding: '16px 32px', borderRadius: 16,
                 fontWeight: 700, fontSize: 16, cursor: 'pointer', transition: 'background 0.2s',
               }}
-                onMouseOver={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'}
-                onMouseOut={e => e.currentTarget.style.background='rgba(255,255,255,0.06)'}
+                onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
               >
                 Contact Sales
               </button>
@@ -746,7 +751,7 @@ const LandingPage = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 40, marginBottom: 48 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ background: '#7C3AED', padding: 6, borderRadius: 8, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ background: '#7C3AED', padding: 6, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Zap style={{ color: '#fff', width: 16, height: 16 }} />
                 </div>
                 <span style={{ fontSize: 16, fontWeight: 800, color: '#f1f5f9' }}>AskMyNotes</span>
@@ -770,8 +775,8 @@ const LandingPage = () => {
                   {col.links.map((link, j) => (
                     <li key={j}>
                       <a href="#" style={{ fontSize: 13, color: '#475569', textDecoration: 'none', transition: 'color 0.2s' }}
-                         onMouseOver={e => e.target.style.color='#a78bfa'}
-                         onMouseOut={e => e.target.style.color='#475569'}>
+                        onMouseOver={e => e.target.style.color = '#a78bfa'}
+                        onMouseOut={e => e.target.style.color = '#475569'}>
                         {link}
                       </a>
                     </li>
@@ -792,6 +797,49 @@ const LandingPage = () => {
             </div>
           </div>
         </footer>
+
+        {/* ── Video Modal ── */}
+        {showVideo && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(5,5,10,0.92)', backdropFilter: 'blur(20px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '40px',
+          }}
+            onClick={() => setShowVideo(false)}
+          >
+            <div style={{
+              width: '100%', maxWidth: '1000px', position: 'relative',
+              boxShadow: '0 0 100px rgba(124,58,237,0.25)',
+              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, overflow: 'hidden',
+              background: '#05050a',
+            }}
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowVideo(false)}
+                style={{
+                  position: 'absolute', top: 20, right: 20, zIndex: 10,
+                  background: 'rgba(255,255,255,0.1)', border: 'none',
+                  color: '#fff', padding: 10, borderRadius: '50%', cursor: 'pointer',
+                  transition: 'background 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+              >
+                <X style={{ width: 24, height: 24 }} />
+              </button>
+
+              <video
+                src={DEMO_VIDEO_URL}
+                controls
+                autoPlay
+                style={{ width: '100%', display: 'block' }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
